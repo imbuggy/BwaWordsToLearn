@@ -25,7 +25,8 @@ import {
   Menu,
   X,
   Info,
-  Trash2
+  Trash2,
+  MessageSquare
 } from 'lucide-react';
 import { GoogleGenAI, Modality } from "@google/genai";
 import { jsPDF } from "jspdf";
@@ -760,7 +761,15 @@ export default function App() {
                         rel="noopener noreferrer"
                         className="flex items-center justify-center gap-2 w-full py-3 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-900 transition-all"
                       >
-                        <RefreshCw className="w-4 h-4" /> View Source & Contact on GitHub
+                        <RefreshCw className="w-4 h-4" /> View Source on GitHub
+                      </a>
+                      <a 
+                        href="https://github.com/imbuggy/BwaWordsToLearn/issues" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 w-full py-3 bg-amber-500 text-white rounded-xl font-bold hover:bg-amber-600 transition-all"
+                      >
+                        <MessageSquare className="w-4 h-4" /> Report an Issue or Feedback
                       </a>
                       <a 
                         href="https://imbuggy.github.io/BwaWordsToLearn/" 
@@ -770,9 +779,10 @@ export default function App() {
                       >
                         <BookOpen className="w-4 h-4" /> Open Live App
                       </a>
-                      <p className="text-center text-xs text-slate-400">
-                        © 2026 • All Rights Reserved
-                      </p>
+                      <div className="flex items-center justify-between mt-2 px-1">
+                        <p className="text-xs text-slate-400 font-medium">Version 1.1.0</p>
+                        <p className="text-xs text-slate-400">© 2026 • All Rights Reserved</p>
+                      </div>
                     </div>
                   </div>
                 </div>
