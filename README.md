@@ -5,7 +5,7 @@ A polished, high-frequency word learning application designed for Reception and 
 ## 🌐 Live Application
 
 You can access the live application here:
-[https://ais-pre-aaqdvxccpkd7jf6tijwt7o-697204231429.europe-west2.run.app](https://ais-pre-aaqdvxccpkd7jf6tijwt7o-697204231429.europe-west2.run.app)
+[https://imbuggy.github.io/BwaWordsToLearn/](https://imbuggy.github.io/BwaWordsToLearn/)
 
 ## 🚀 Features
 
