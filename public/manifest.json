@@ -1,0 +1,23 @@
+{
+  "name": "BWA Words to Learn",
+  "short_name": "BWA Words",
+  "description": "Belleville Wix Academy high-frequency word learning app.",
+  "start_url": "/BwaWordsToLearn/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "https://picsum.photos/192",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://picsum.photos/512",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

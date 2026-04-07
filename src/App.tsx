@@ -762,6 +762,14 @@ export default function App() {
                       >
                         <RefreshCw className="w-4 h-4" /> View Source & Contact on GitHub
                       </a>
+                      <a 
+                        href="https://imbuggy.github.io/BwaWordsToLearn/" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all"
+                      >
+                        <BookOpen className="w-4 h-4" /> Open Live App
+                      </a>
                       <p className="text-center text-xs text-slate-400">
                         © 2026 • All Rights Reserved
                       </p>
