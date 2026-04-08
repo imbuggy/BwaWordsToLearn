@@ -7,7 +7,7 @@ export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
   return {
     // If deploying to GitHub Pages, set base to your repository name:
-    base: '/BwaWordsToLearn/',
+    base: mode === 'production' ? '/BwaWordsToLearn/' : '/',
     plugins: [react(), tailwindcss()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),

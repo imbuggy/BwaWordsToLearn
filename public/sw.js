@@ -1,8 +1,8 @@
 const CACHE_NAME = 'bwa-words-v1';
 const ASSETS = [
-  '/BwaWordsToLearn/',
-  '/BwaWordsToLearn/index.html',
-  '/BwaWordsToLearn/manifest.json'
+  './',
+  'index.html',
+  'manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
