@@ -568,10 +568,10 @@ export default function App() {
       {/* Header */}
       <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-3">
-          <div className="bg-bwa-blue p-2 rounded-xl shadow-sm">
-            <BookOpen className="text-white w-6 h-6" />
+          <div className="bg-bwa-blue p-1.5 rounded-xl shadow-sm">
+            <img src="icon.svg" alt="BWA Logo" className="w-7 h-7" referrerPolicy="no-referrer" />
           </div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-800">BWA Words to Learn</h1>
+          <h1 className="text-xl font-bold tracking-tight text-slate-800">Words to Learn</h1>
         </div>
         
         <div className="flex items-center gap-2">
@@ -738,7 +738,7 @@ export default function App() {
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
                       <Info className="w-6 h-6 text-blue-600" />
-                      About BWA Words
+                      About Words to Learn
                     </h2>
                     <button 
                       onClick={() => setShowAboutModal(false)}

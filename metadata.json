@@ -1,5 +1,5 @@
 {
-  "name": "BWA Words to Learn",
+  "name": "Words to Learn",
   "description": "A fun, interactive flashcard app for BWA students to master high-frequency words. Created by a parent to support learning.",
   "requestFramePermissions": ["microphone"]
 }

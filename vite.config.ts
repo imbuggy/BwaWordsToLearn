@@ -6,8 +6,8 @@ import {defineConfig, loadEnv} from 'vite';
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
   return {
-    // If deploying to GitHub Pages, set base to your repository name:
-    base: mode === 'production' ? '/BwaWordsToLearn/' : '/',
+    // Use relative paths for assets to support both root and subfolder deployments:
+    base: './',
     plugins: [react(), tailwindcss()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),

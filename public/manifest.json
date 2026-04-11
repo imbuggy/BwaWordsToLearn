@@ -1,6 +1,6 @@
 {
-  "name": "BWA Words to Learn",
-  "short_name": "BWA Words",
+  "name": "Words to Learn",
+  "short_name": "Words",
   "description": "Belleville Wix Academy high-frequency word learning app.",
   "start_url": "./",
   "display": "standalone",

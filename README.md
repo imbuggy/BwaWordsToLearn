@@ -1,4 +1,4 @@
-# BWA Words to Learn
+# Words to Learn
 
 A polished, high-frequency word learning application designed for Reception and Year 1 students. This tool follows the "Words to Learn" list used by Belleville Wix Academy.
 
