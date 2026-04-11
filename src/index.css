@@ -4,6 +4,8 @@
 @theme {
   --font-sans: "Comic Neue", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --color-bwa-blue: #002f5d;
+  --color-bwa-gold: #fdb913;
 }
 
 @layer utilities {

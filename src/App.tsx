@@ -564,11 +564,11 @@ export default function App() {
   }, [words, pdfLevel]);
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-indigo-100">
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-bwa-blue/20">
       {/* Header */}
       <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-3">
-          <div className="bg-indigo-600 p-2 rounded-xl shadow-sm">
+          <div className="bg-bwa-blue p-2 rounded-xl shadow-sm">
             <BookOpen className="text-white w-6 h-6" />
           </div>
           <h1 className="text-xl font-bold tracking-tight text-slate-800">BWA Words to Learn</h1>
@@ -579,7 +579,7 @@ export default function App() {
           <div className="hidden md:flex items-center gap-2">
             <button 
               onClick={() => setShowScoreboard(!showScoreboard)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${showScoreboard ? 'bg-indigo-100 text-indigo-600' : 'hover:bg-slate-100 text-slate-500'}`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${showScoreboard ? 'bg-bwa-blue/10 text-bwa-blue' : 'hover:bg-slate-100 text-slate-500'}`}
             >
               <Trophy className="w-5 h-5" />
               <span className="text-sm font-bold">Progress</span>
@@ -643,7 +643,7 @@ export default function App() {
                 onClick={() => { setShowPdfModal(true); setShowMobileMenu(false); }}
                 className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 text-slate-700 font-bold transition-colors"
               >
-                <FileText className="w-5 h-5 text-indigo-500" /> Worksheet
+                <FileText className="w-5 h-5 text-bwa-blue" /> Worksheet
               </button>
               <button 
                 onClick={() => { setShowAboutModal(true); setShowMobileMenu(false); }}
@@ -670,7 +670,7 @@ export default function App() {
                 }}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 ${
                   gradeFilter === level 
-                    ? 'bg-indigo-600 text-white shadow-md' 
+                    ? 'bg-bwa-blue text-white shadow-md' 
                     : 'text-slate-500 hover:bg-slate-50'
                 }`}
               >
@@ -690,7 +690,7 @@ export default function App() {
                 }}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 ${
                   mode === m 
-                    ? 'bg-indigo-600 text-white shadow-md' 
+                    ? 'bg-bwa-blue text-white shadow-md' 
                     : 'text-slate-500 hover:bg-slate-50'
                 }`}
               >
@@ -713,7 +713,7 @@ export default function App() {
                   }}
                   className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition-all duration-200 ${
                     categoryFilter === cat 
-                      ? 'bg-indigo-100 text-indigo-700' 
+                      ? 'bg-bwa-blue/10 text-bwa-blue' 
                       : 'text-slate-400 hover:bg-slate-50'
                   }`}
                 >
@@ -775,7 +775,7 @@ export default function App() {
                         href="https://imbuggy.github.io/BwaWordsToLearn/" 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-2 w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all"
+                        className="flex items-center justify-center gap-2 w-full py-3 bg-bwa-blue text-white rounded-xl font-bold hover:bg-bwa-blue/90 transition-all"
                       >
                         <BookOpen className="w-4 h-4" /> Open Live App
                       </a>
@@ -840,7 +840,7 @@ export default function App() {
                 <div className="p-8">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                      <FileText className="w-6 h-6 text-indigo-600" />
+                      <FileText className="w-6 h-6 text-bwa-blue" />
                       Download Worksheet
                     </h2>
                     <button 
@@ -866,7 +866,7 @@ export default function App() {
                             }}
                             className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
                               pdfLevel === level 
-                                ? 'bg-indigo-600 text-white shadow-md' 
+                                ? 'bg-bwa-blue text-white shadow-md' 
                                 : 'text-slate-500 hover:bg-slate-100'
                             }`}
                           >
@@ -889,7 +889,7 @@ export default function App() {
                             }}
                             className={`px-4 py-3 rounded-xl text-sm font-semibold border transition-all text-left flex items-center justify-between ${
                               selectedPdfCategories.includes(cat)
-                                ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                                ? 'bg-bwa-blue/5 border-bwa-blue/20 text-bwa-blue'
                                 : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
                             }`}
                           >
@@ -903,7 +903,7 @@ export default function App() {
 
                     <button 
                       onClick={generatePDF}
-                      className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2"
+                      className="w-full py-4 bg-bwa-blue text-white rounded-2xl font-bold hover:bg-bwa-blue/90 transition-all shadow-lg shadow-bwa-blue/10 flex items-center justify-center gap-2"
                     >
                       <Download className="w-5 h-5" />
                       Generate PDF Worksheet
@@ -928,7 +928,7 @@ export default function App() {
                 <div className="p-8">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                      <RefreshCw className="w-6 h-6 text-indigo-600" />
+                      <RefreshCw className="w-6 h-6 text-bwa-blue" />
                       Sync Progress
                     </h2>
                     <button 
@@ -955,7 +955,7 @@ export default function App() {
                         />
                         <button 
                           onClick={() => copyToClipboard(exportProgress())}
-                          className="absolute bottom-3 right-3 bg-white border border-slate-200 p-2 rounded-lg shadow-sm hover:bg-slate-50 transition-colors flex items-center gap-2 text-xs font-bold text-indigo-600"
+                          className="absolute bottom-3 right-3 bg-white border border-slate-200 p-2 rounded-lg shadow-sm hover:bg-slate-50 transition-colors flex items-center gap-2 text-xs font-bold text-bwa-blue"
                         >
                           {syncStatus === 'success' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                           {syncStatus === 'success' ? 'Copied!' : 'Copy Code'}
@@ -976,7 +976,7 @@ export default function App() {
                         value={syncInput}
                         onChange={(e) => setSyncInput(e.target.value)}
                         placeholder="Paste code here..."
-                        className="w-full h-24 bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs font-mono text-slate-600 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none"
+                        className="w-full h-24 bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs font-mono text-slate-600 focus:ring-2 focus:ring-bwa-blue/50 focus:border-transparent outline-none resize-none"
                       />
                       <button 
                         onClick={handleImport}
@@ -986,7 +986,7 @@ export default function App() {
                             ? 'bg-red-500 text-white' 
                             : syncStatus === 'success'
                             ? 'bg-green-500 text-white'
-                            : 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed'
+                            : 'bg-bwa-blue text-white hover:bg-bwa-blue/90 disabled:opacity-50 disabled:cursor-not-allowed'
                         }`}
                       >
                         {syncStatus === 'error' ? <XCircle className="w-5 h-5" /> : <Upload className="w-5 h-5" />}
@@ -1012,7 +1012,7 @@ export default function App() {
               </h2>
               <button 
                 onClick={() => setShowScoreboard(false)}
-                className="text-indigo-600 font-medium hover:underline"
+                className="text-bwa-blue font-medium hover:underline"
               >
                 Back to Cards
               </button>
@@ -1024,10 +1024,10 @@ export default function App() {
                 <div className="text-4xl font-black text-emerald-700">{stats.mastered}</div>
                 <div className="text-emerald-600/60 text-xs mt-1">Words with 5+ correct</div>
               </div>
-              <div className="bg-indigo-50 p-6 rounded-2xl border border-indigo-100">
-                <div className="text-indigo-600 text-sm font-bold uppercase tracking-wider mb-1">Learning</div>
-                <div className="text-4xl font-black text-indigo-700">{stats.learning}</div>
-                <div className="text-indigo-600/60 text-xs mt-1">Words in progress</div>
+              <div className="bg-bwa-blue/5 p-6 rounded-2xl border border-bwa-blue/10">
+                <div className="text-bwa-blue text-sm font-bold uppercase tracking-wider mb-1">Learning</div>
+                <div className="text-4xl font-black text-bwa-blue">{stats.learning}</div>
+                <div className="text-bwa-blue/60 text-xs mt-1">Words in progress</div>
               </div>
               <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
                 <div className="text-slate-600 text-sm font-bold uppercase tracking-wider mb-1">New</div>
@@ -1052,7 +1052,7 @@ export default function App() {
                       key={w.word}
                       className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
                         score >= 5 ? 'bg-emerald-100 border-emerald-200 text-emerald-700' :
-                        score > 0 ? 'bg-indigo-100 border-indigo-200 text-indigo-700' :
+                        score > 0 ? 'bg-bwa-blue/10 border-bwa-blue/20 text-bwa-blue' :
                         'bg-white border-slate-200 text-slate-400'
                       }`}
                     >
@@ -1071,7 +1071,7 @@ export default function App() {
               <div className="flex flex-wrap justify-center gap-3">
                 <button 
                   onClick={() => setShowSyncModal(true)}
-                  className="flex items-center gap-2 px-6 py-3 bg-indigo-50 text-indigo-600 rounded-xl font-bold hover:bg-indigo-100 transition-all border border-indigo-100"
+                  className="flex items-center gap-2 px-6 py-3 bg-bwa-blue/5 text-bwa-blue rounded-xl font-bold hover:bg-bwa-blue/10 transition-all border border-bwa-blue/10"
                 >
                   <RefreshCw className="w-5 h-5" /> Sync Progress
                 </button>
@@ -1093,10 +1093,10 @@ export default function App() {
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: `${(stats.mastered / stats.total) * 100}%` }}
-                    className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500"
+                    className="h-full bg-gradient-to-r from-bwa-blue to-emerald-500"
                   />
                 </div>
-                <span className="text-xs font-black text-indigo-600 min-w-[3ch]">
+                <span className="text-xs font-black text-bwa-blue min-w-[3ch]">
                   {Math.round((stats.mastered / stats.total) * 100)}%
                 </span>
               </div>
@@ -1105,7 +1105,7 @@ export default function App() {
                   {stats.mastered} / {stats.total} mastered
                 </p>
                 {stats.learning > 0 && (
-                  <p className="text-[10px] text-indigo-400 font-medium animate-pulse">
+                  <p className="text-[10px] text-bwa-blue/60 font-medium animate-pulse">
                     {stats.learning} active
                   </p>
                 )}
@@ -1150,7 +1150,7 @@ export default function App() {
                           onClick={speakWord}
                           disabled={isSpeaking}
                           className={`p-4 rounded-full transition-all ${
-                            isSpeaking ? 'bg-indigo-100 text-indigo-400' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:scale-110 active:scale-95'
+                            isSpeaking ? 'bg-bwa-blue/10 text-bwa-blue/40' : 'bg-bwa-blue/5 text-bwa-blue hover:bg-bwa-blue/10 hover:scale-110 active:scale-95'
                           }`}
                         >
                           <Volume2 className={`w-8 h-8 ${isSpeaking ? 'animate-pulse' : ''}`} />
@@ -1163,7 +1163,7 @@ export default function App() {
                             onClick={speakWord}
                             disabled={isSpeaking}
                             className={`p-6 rounded-full transition-all ${
-                              isSpeaking ? 'bg-indigo-100 text-indigo-400' : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-110 active:scale-95 shadow-lg'
+                              isSpeaking ? 'bg-bwa-blue/10 text-bwa-blue/40' : 'bg-bwa-blue text-white hover:bg-bwa-blue/90 hover:scale-110 active:scale-95 shadow-lg'
                             }`}
                           >
                             <Volume2 className={`w-10 h-10 ${isSpeaking ? 'animate-pulse' : ''}`} />
@@ -1173,7 +1173,7 @@ export default function App() {
                             <div className="text-center animate-bounce">
                               <p className="text-red-500 font-bold text-lg mb-2">Oops! Try again.</p>
                               <p className="text-slate-400 text-sm mb-1">The correct word is:</p>
-                              <p className="text-4xl font-black text-indigo-600 tracking-wider bg-indigo-50 px-6 py-2 rounded-2xl border-2 border-indigo-100">
+                              <p className="text-4xl font-black text-bwa-blue tracking-wider bg-bwa-blue/5 px-6 py-2 rounded-2xl border-2 border-bwa-blue/10">
                                 {currentWord.word}
                               </p>
                             </div>
@@ -1190,12 +1190,12 @@ export default function App() {
                             onKeyDown={(e) => e.key === 'Enter' && checkSpelling()}
                             placeholder={isCorrecting ? "Copy the word here..." : "Type here..."}
                             className={`w-full text-3xl font-bold text-center py-4 border-b-4 outline-none transition-all bg-transparent ${
-                              isCorrecting ? 'border-indigo-300 text-indigo-600' : 'border-slate-200 focus:border-indigo-500'
+                              isCorrecting ? 'border-bwa-blue/30 text-bwa-blue' : 'border-slate-200 focus:border-bwa-blue'
                             }`}
                             autoFocus
                           />
                           {isCorrecting && (
-                            <div className="absolute -bottom-8 left-0 right-0 text-center text-indigo-400 text-xs font-bold animate-pulse">
+                            <div className="absolute -bottom-8 left-0 right-0 text-center text-bwa-blue/60 text-xs font-bold animate-pulse">
                               TYPE THE WORD TO CONTINUE
                             </div>
                           )}
@@ -1206,7 +1206,7 @@ export default function App() {
                 )}
               </AnimatePresence>
             </div>
-
+ 
             {/* Controls */}
             {mode === 'Read' ? (
               <div className="flex gap-6 w-full max-w-md">
@@ -1230,7 +1230,7 @@ export default function App() {
               <button
                 onClick={checkSpelling}
                 disabled={!userInput.trim()}
-                className="w-full max-w-md bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white py-6 rounded-3xl font-bold flex items-center justify-center gap-3 transition-all hover:shadow-xl active:scale-95 shadow-lg shadow-indigo-100"
+                className="w-full max-w-md bg-bwa-blue hover:bg-bwa-blue/90 disabled:bg-slate-300 text-white py-6 rounded-3xl font-bold flex items-center justify-center gap-3 transition-all hover:shadow-xl active:scale-95 shadow-lg shadow-bwa-blue/10"
               >
                 <CheckCircle2 className="w-8 h-8" />
                 <span className="text-xl">Check Spelling</span>
