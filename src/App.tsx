@@ -445,6 +445,19 @@ export default function App() {
     setTimeout(() => setSyncStatus('idle'), 2000);
   };
 
+  const toggleMastery = (wordToToggle: string) => {
+    setWords(prev => prev.map(w => {
+      if (w.word === wordToToggle && w.level === gradeFilter) {
+        const currentScore = mode === 'Read' ? w.readScore : w.writeScore;
+        const newScore = currentScore >= 5 ? 0 : 5;
+        return mode === 'Read' 
+          ? { ...w, readScore: newScore } 
+          : { ...w, writeScore: newScore };
+      }
+      return w;
+    }));
+  };
+
   const currentWord = currentWordIndex !== null ? words[currentWordIndex] : null;
 
   // Mastery stats
@@ -1037,9 +1050,12 @@ export default function App() {
             </div>
 
             <div className="space-y-4">
-              <h3 className="font-bold text-slate-700 flex items-center gap-2">
-                <GraduationCap className="w-5 h-5" /> {mode} Word List
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                  <GraduationCap className="w-5 h-5" /> {mode} Word List
+                </h3>
+                <p className="text-[10px] text-slate-400 italic">Click a word to toggle mastery</p>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {filteredWords.sort((a, b) => {
                   const scoreA = mode === 'Read' ? a.readScore : a.writeScore;
@@ -1048,17 +1064,19 @@ export default function App() {
                 }).map((w) => {
                   const score = mode === 'Read' ? w.readScore : w.writeScore;
                   return (
-                    <div 
+                    <button 
                       key={w.word}
-                      className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${
-                        score >= 5 ? 'bg-emerald-100 border-emerald-200 text-emerald-700' :
-                        score > 0 ? 'bg-bwa-blue/10 border-bwa-blue/20 text-bwa-blue' :
-                        'bg-white border-slate-200 text-slate-400'
+                      onClick={() => toggleMastery(w.word)}
+                      className={`px-4 py-2 rounded-full text-sm font-medium border transition-all hover:scale-105 active:scale-95 ${
+                        score >= 5 ? 'bg-emerald-100 border-emerald-200 text-emerald-700 hover:bg-emerald-200' :
+                        score > 0 ? 'bg-bwa-blue/10 border-bwa-blue/20 text-bwa-blue hover:bg-bwa-blue/20' :
+                        'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
                       }`}
+                      title={score >= 5 ? "Click to mark as unmastered" : "Click to mark as mastered"}
                     >
                       {w.word}
                       <span className="ml-2 opacity-50 text-[10px]">{score}</span>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
