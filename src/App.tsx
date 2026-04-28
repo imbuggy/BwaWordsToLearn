@@ -9,7 +9,6 @@ import confetti from 'canvas-confetti';
 import { 
   CheckCircle2, 
   XCircle, 
-  Volume2, 
   Trophy, 
   Settings, 
   ChevronRight, 
@@ -342,8 +341,6 @@ export default function App() {
   const [syncInput, setSyncInput] = useState('');
   const [syncStatus, setSyncStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-  const [userInput, setUserInput] = useState('');
-  const [isCorrecting, setIsCorrecting] = useState(false);
   const [sessionCount, setSessionCount] = useState(0);
   const [sessionActive, setSessionActive] = useState(false);
   const [showSessionSummary, setShowSessionSummary] = useState(false);
@@ -459,8 +456,6 @@ export default function App() {
       setLastWordId(words[nextIndex].word);
       setCurrentWordIndex(nextIndex);
       setFeedback(null);
-      setUserInput('');
-      setIsCorrecting(false);
     }
   }, [filteredWords, words, mode, lastWordId, reviewQueue]);
 
@@ -538,13 +533,6 @@ export default function App() {
     setTimeout(() => {
       pickNextWord();
     }, 600);
-  };
-
-  const getImageUrl = (word: string) => {
-    const rawWord = word;
-    const sanitizedWord = rawWord.replace(/\((.*?)\)/g, '$1').replace(/[^\w\s]/gi, '');
-    const encoded = encodeURIComponent(`A simple, clear, colorful flat illustration of ${sanitizedWord} for kids. White background. Keep it simple and age-appropriate.`);
-    return `https://image.pollinations.ai/prompt/${encoded}?width=400&height=400&nologo=true`;
   };
 
   const resetProgress = () => {
