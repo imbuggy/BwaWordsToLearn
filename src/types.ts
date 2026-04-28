@@ -1,6 +1,7 @@
 
 export type GradeLevel = 'Reception' | 'Year 1';
-export type AppMode = 'Read' | 'Write';
+export type AppMode = 'Read';
+export type AppSection = 'Words' | 'Maths';
 
 export interface WordData {
   word: string;
@@ -9,6 +10,19 @@ export interface WordData {
   readScore: number;
   writeScore: number;
   lastSeen?: number;
+}
+
+export interface BondData {
+  avgTime: number;
+  recentTimes: number[];
+}
+
+export interface NumberBondStats {
+  target: number;
+  correct: number;
+  total: number;
+  bestStreak: number;
+  bonds: Record<string, BondData>;
 }
 
 export interface AppState {
