@@ -78,12 +78,13 @@ const playWrongSound = () => {
   setTimeout(() => audioCtx.close(), 500);
 };
 
-function NumberBonds({ stats, onUpdateStats, onAnswer, grade, forcedTarget }: { 
+function NumberBonds({ stats, onUpdateStats, onAnswer, grade, forcedTarget, calcType }: { 
   stats: NumberBondStats[], 
   onUpdateStats: (stats: NumberBondStats[]) => void,
   onAnswer: (isCorrect: boolean, bondKey: string, oldTime: number | undefined, newTime: number) => void,
   grade: GradeLevel,
-  forcedTarget: 10 | 20
+  forcedTarget: 10 | 20,
+  calcType: 'bonds' | 'additions'
 }) {
   const [target, setTarget] = useState<10 | 20>(forcedTarget);
   
@@ -96,7 +97,7 @@ function NumberBonds({ stats, onUpdateStats, onAnswer, grade, forcedTarget }: {
       setTarget(10);
     }
   }, [grade]);
-  const [question, setQuestion] = useState<{ a: number, b: number } | null>(null);
+  const [question, setQuestion] = useState<{ a: number, b: number, answer: number } | null>(null);
   const [prevQuestionKey, setPrevQuestionKey] = useState<string | null>(null);
   const [options, setOptions] = useState<number[]>([]);
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
@@ -105,43 +106,54 @@ function NumberBonds({ stats, onUpdateStats, onAnswer, grade, forcedTarget }: {
   const startTime = useRef<number>(Date.now());
 
   const generateQuestion = useCallback(() => {
-    let a, b, key;
+    let a, b, key, correctAns;
     do {
-      a = Math.floor(Math.random() * (target + 1));
-      b = target - a;
+      if (calcType === 'bonds') {
+        a = Math.floor(Math.random() * (target + 1));
+        b = target - a;
+        correctAns = b;
+      } else { // additions
+        a = Math.floor(Math.random() * (target + 1));
+        b = Math.floor(Math.random() * ((target - a) + 1));
+        correctAns = a + b;
+      }
       key = `${Math.min(a, b)}+${Math.max(a, b)}`;
     } while (key === prevQuestionKey && target <= 20); // Avoid same numeric pair twice
 
-    setQuestion({ a, b });
+    setQuestion({ a, b, answer: correctAns });
     setPrevQuestionKey(key);
     
     // Generate options
-    const correct = b;
     const others = new Set<number>();
     while (others.size < 3) {
-      const rand = Math.floor(Math.random() * (target + 1));
-      if (rand !== correct) others.add(rand);
+      if (calcType === 'bonds') {
+        const rand = Math.floor(Math.random() * (target + 1));
+        if (rand !== correctAns) others.add(rand);
+      } else {
+        const rand = Math.floor(Math.random() * (target + 1));
+        if (rand !== correctAns) others.add(rand);
+      }
     }
-    setOptions([correct, ...Array.from(others)].sort((x, y) => x - y));
+    setOptions([correctAns, ...Array.from(others)].sort((x, y) => x - y));
     setFeedback(null);
     setSelectedAnswer(null);
     startTime.current = Date.now();
-  }, [target]);
+  }, [target, calcType, prevQuestionKey]);
 
   useEffect(() => {
     generateQuestion();
   }, [generateQuestion]);
 
   const handleAnswer = (ans: number) => {
-    if (feedback) return;
+    if (feedback || !question) return;
     
     setSelectedAnswer(ans);
     const timeTaken = Date.now() - startTime.current;
-    const isCorrect = ans === question?.b;
+    const isCorrect = ans === question.answer;
     setFeedback(isCorrect ? 'correct' : 'wrong');
     
     const newStats = [...stats];
-    const sIdx = newStats.findIndex(s => s.target === target);
+    const sIdx = newStats.findIndex(s => s.target === target && s.type === calcType);
     
     if (sIdx !== -1) {
       const s = { ...newStats[sIdx] };
@@ -170,15 +182,20 @@ function NumberBonds({ stats, onUpdateStats, onAnswer, grade, forcedTarget }: {
         setStreak(curr => curr + 1);
         s.correct += 1;
         s.bestStreak = Math.max(s.bestStreak, streak + 1);
-        updateBond(question!.a, question!.b, timeTaken, false);
+        updateBond(question.a, question.b, timeTaken, false);
       } else {
         playWrongSound();
         setStreak(0);
         // Penalty for current bond
-        updateBond(question!.a, question!.b, timeTaken, true);
-        // Penalty for incorrectly guessed bond
-        const guessedA = target - ans;
-        updateBond(guessedA, ans, timeTaken, true);
+        updateBond(question.a, question.b, timeTaken, true);
+        // If bond, answer is the missing part. If addition, answer is the sum.
+        if (calcType === 'bonds') {
+          const guessedA = target - ans;
+          updateBond(guessedA, ans, timeTaken, true);
+        } else {
+            // For addition penalty on wrong answer, we just note the wrong answer 
+            // no specific A B swap here
+        }
       }
       
       newStats[sIdx] = s;
@@ -208,7 +225,7 @@ function NumberBonds({ stats, onUpdateStats, onAnswer, grade, forcedTarget }: {
                   : 'text-slate-500 hover:bg-slate-50'
               }`}
             >
-              Bonds to {t}
+              {calcType === 'bonds' ? `Bonds to ${t}` : `Additions to ${t}`}
             </button>
           ))}
         </div>
@@ -216,7 +233,7 @@ function NumberBonds({ stats, onUpdateStats, onAnswer, grade, forcedTarget }: {
 
       {/* Question Card */}
       <motion.div 
-        key={`${target}-${question?.a}`}
+        key={`${target}-${question?.a}-${calcType}`}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="bg-white p-8 md:p-12 rounded-[2.5rem] md:rounded-[3rem] shadow-xl border border-slate-100 flex flex-col items-center gap-6 md:gap-8 w-full max-w-md relative overflow-hidden"
@@ -224,11 +241,23 @@ function NumberBonds({ stats, onUpdateStats, onAnswer, grade, forcedTarget }: {
         <div className="text-4xl md:text-6xl font-black text-slate-800 flex items-center gap-3 md:gap-4">
           <span>{question?.a}</span>
           <Plus className="w-6 h-6 md:w-10 md:h-10 text-slate-300" />
-          <div className="w-16 h-16 md:w-20 md:h-20 bg-slate-50 rounded-2xl border-4 border-dashed border-slate-200 flex items-center justify-center text-bwa-blue">
-            ?
-          </div>
-          <span className="text-slate-300">=</span>
-          <span>{target}</span>
+          {calcType === 'bonds' ? (
+            <>
+              <div className="w-16 h-16 md:w-20 md:h-20 bg-slate-50 rounded-2xl border-4 border-dashed border-slate-200 flex items-center justify-center text-bwa-blue">
+                ?
+              </div>
+              <span className="text-slate-300">=</span>
+              <span>{target}</span>
+            </>
+          ) : (
+            <>
+              <span>{question?.b}</span>
+              <span className="text-slate-300">=</span>
+              <div className="w-16 h-16 md:w-20 md:h-20 bg-slate-50 rounded-2xl border-4 border-dashed border-slate-200 flex items-center justify-center text-bwa-blue">
+                ?
+              </div>
+            </>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-3 md:gap-4 w-full">
@@ -237,9 +266,9 @@ function NumberBonds({ stats, onUpdateStats, onAnswer, grade, forcedTarget }: {
               key={opt}
               onClick={() => handleAnswer(opt)}
               className={`py-4 md:py-6 rounded-2xl md:rounded-3xl text-2xl md:text-3xl font-bold transition-all border-2 ${
-                feedback === 'correct' && opt === question?.b
+                feedback === 'correct' && opt === question?.answer
                   ? 'bg-emerald-500 border-emerald-600 text-white scale-105 shadow-lg'
-                  : feedback === 'wrong' && opt === question?.b
+                  : feedback === 'wrong' && opt === question?.answer
                   ? 'bg-emerald-500 border-emerald-600 text-white scale-105 shadow-lg'
                   : feedback === 'wrong' && opt === selectedAnswer
                   ? 'bg-red-500 border-red-600 text-white opacity-50'
@@ -338,23 +367,38 @@ export default function App() {
   });
   const [numberBondStats, setNumberBondStats] = useState<NumberBondStats[]>(() => {
     const saved = safeStorage.getItem('word-spark-maths');
+    let loaded: NumberBondStats[] = [];
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        return parsed.map((s: any) => ({
+        loaded = parsed.map((s: any) => ({
           ...s,
+          type: s.type || 'bonds',
           bonds: s.bonds || {}
         }));
       } catch(e) {
         console.error("Error parsing word-spark-maths", e);
       }
     }
-    return [
-      { target: 10, correct: 0, total: 0, bestStreak: 0, bonds: {} },
-      { target: 20, correct: 0, total: 0, bestStreak: 0, bonds: {} }
+    
+    // Ensure all 4 sections exist
+    const defaultStats: NumberBondStats[] = [
+      { type: 'bonds', target: 10, correct: 0, total: 0, bestStreak: 0, bonds: {} },
+      { type: 'bonds', target: 20, correct: 0, total: 0, bestStreak: 0, bonds: {} },
+      { type: 'additions', target: 10, correct: 0, total: 0, bestStreak: 0, bonds: {} },
+      { type: 'additions', target: 20, correct: 0, total: 0, bestStreak: 0, bonds: {} }
     ];
+
+    defaultStats.forEach(ds => {
+      if (!loaded.find(s => s.type === ds.type && s.target === ds.target)) {
+        loaded.push(ds);
+      }
+    });
+
+    return loaded;
   });
   const [bondTarget, setBondTarget] = useState<10 | 20>(10);
+  const [calcType, setCalcType] = useState<'bonds' | 'additions'>('bonds');
   const [currentWordIndex, setCurrentWordIndex] = useState<number | null>(null);
   const [lastWordIndex, setLastWordIndex] = useState<number | null>(null);
   const [lastWordId, setLastWordId] = useState<string | null>(null);
@@ -408,6 +452,47 @@ export default function App() {
     const allCats = words.filter(w => w.level === gradeFilter).map(w => w.category);
     return ['All', ...Array.from(new Set(allCats))];
   }, [words, gradeFilter]);
+
+  const categoryStats = useMemo(() => {
+    const catStats: Record<string, number> = {};
+    categories.forEach(cat => {
+      const catWords = words.filter(w => {
+          const matchesGrade = w.level === gradeFilter;
+          const matchesCategory = cat === 'All' || w.category === cat;
+          return matchesGrade && matchesCategory;
+      });
+      
+      const total = catWords.length;
+      const totalPossibleScore = total * 5;
+      const currentTotalScore = catWords.reduce((acc, w) => {
+        const score = mode === 'Read' ? w.readScore : w.writeScore;
+        return acc + Math.min(5, score);
+      }, 0);
+      catStats[cat] = totalPossibleScore > 0 ? (currentTotalScore / totalPossibleScore) * 100 : 0;
+    });
+    return catStats;
+  }, [words, gradeFilter, categories, mode]);
+
+  const mathStats = useMemo(() => {
+    const stats: Record<string, number> = {};
+    numberBondStats.forEach(s => {
+      // Approximate pairs for additions
+      const maxAdditions = ((s.target + 1) * (s.target + 2)) / 2;
+      const totalPairs = s.type === 'bonds' ? Math.floor(s.target / 2) + 1 : Math.min(25, maxAdditions);
+      let totalScore = 0;
+      Object.values(s.bonds).forEach((b: any) => {
+        if (b.avgTime !== undefined) {
+          if (b.avgTime <= 2000) totalScore += 5;
+          else if (b.avgTime < 5000) totalScore += 4;
+          else if (b.avgTime < 7500) totalScore += 3;
+          else if (b.avgTime < 10000) totalScore += 2;
+          else totalScore += 1;
+        }
+      });
+      stats[`${s.type}-${s.target}`] = (totalScore / (totalPairs * 5)) * 100;
+    });
+    return stats;
+  }, [numberBondStats]);
 
   const pickNextWord = useCallback(() => {
     if (filteredWords.length === 0) return;
@@ -1063,24 +1148,32 @@ export default function App() {
               ) : (
                 <div className="space-y-10">
                   {/* Maths Stats Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {numberBondStats.map((s) => (
-                      <div key={s.target} className="bg-slate-50 p-6 rounded-2xl border border-slate-200 flex items-center justify-between">
-                        <div>
-                          <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Bonds to {s.target}</div>
-                          <div className="text-3xl font-black text-slate-700">{s.correct} <span className="text-slate-300 font-normal text-lg">/ {s.total}</span></div>
+                      <div key={`${s.type}-${s.target}`} className={`p-6 rounded-2xl border flex flex-col justify-between ${
+                        s.type === 'bonds' ? 'bg-amber-50 border-amber-100' : 'bg-emerald-50 border-emerald-100'
+                      }`}>
+                        <div className="flex items-start justify-between mb-4">
+                          <div className={`text-xs font-bold uppercase tracking-wider ${
+                            s.type === 'bonds' ? 'text-amber-700' : 'text-emerald-700'
+                          }`}>
+                            {s.type === 'bonds' ? `Bonds to ${s.target}` : `Additions up to ${s.target}`}
+                          </div>
+                          <div className="text-right">
+                            <div className="text-[9px] font-bold text-slate-400 uppercase">Best Streak</div>
+                            <div className={`text-xl font-black ${
+                              s.type === 'bonds' ? 'text-amber-500' : 'text-emerald-500'
+                            }`}>{s.bestStreak}</div>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Best Streak</div>
-                          <div className="text-3xl font-black text-amber-500">{s.bestStreak}</div>
-                        </div>
+                        <div className="text-4xl font-black text-slate-700">{s.correct} <span className="text-slate-400 font-normal text-xl">/ {s.total}</span></div>
                       </div>
                     ))}
                   </div>
 
                   {/* Bond Combination Tables */}
                   <div className="space-y-12">
-                    {numberBondStats.map((s) => {
+                    {numberBondStats.filter(s => s.type === 'bonds').map((s) => {
                       const combinations = [];
                       for (let i = 0; i <= s.target / 2; i++) {
                         combinations.push({ a: i, b: s.target - i });
@@ -1220,9 +1313,30 @@ export default function App() {
                   <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Calculation Type</label>
-                      <button className="w-full py-2.5 rounded-xl font-bold flex items-center gap-2 px-4 bg-amber-50 text-amber-700 border-2 border-amber-200 shadow-sm scale-[1.01]">
-                        <CheckCircle2 className="w-4 h-4" /> Number Bonds
-                      </button>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button 
+                          onClick={() => setCalcType('bonds')}
+                          className={`w-full py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 px-2 transition-all border-2 ${
+                            calcType === 'bonds'
+                              ? 'bg-amber-50 text-amber-700 border-amber-200 shadow-sm scale-[1.01]'
+                              : 'bg-white text-slate-500 border-slate-100 hover:border-slate-200'
+                          }`}
+                        >
+                          {calcType === 'bonds' && <CheckCircle2 className="w-4 h-4 shrink-0" />} 
+                          <span className="text-xs sm:text-sm">Number Bonds</span>
+                        </button>
+                        <button 
+                          onClick={() => setCalcType('additions')}
+                          className={`w-full py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 px-2 transition-all border-2 ${
+                            calcType === 'additions'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm scale-[1.01]'
+                              : 'bg-white text-slate-500 border-slate-100 hover:border-slate-200'
+                          }`}
+                        >
+                          {calcType === 'additions' && <CheckCircle2 className="w-4 h-4 shrink-0" />} 
+                          <span className="text-xs sm:text-sm">Additions</span>
+                        </button>
+                      </div>
                     </div>
                     
                     {gradeFilter !== 'Reception' && (
@@ -1233,13 +1347,16 @@ export default function App() {
                             <button
                               key={t}
                               onClick={() => setBondTarget(t as 10 | 20)}
-                              className={`py-2 rounded-xl font-bold border-2 transition-all ${
+                              className={`py-2 px-3 rounded-xl font-bold border-2 transition-all flex justify-between items-center ${
                                 bondTarget === t 
-                                  ? 'bg-amber-500 text-white border-amber-500 shadow-sm scale-[1.01]' 
+                                  ? calcType === 'bonds' 
+                                      ? 'bg-amber-500 text-white border-amber-500 shadow-sm scale-[1.01]'
+                                      : 'bg-emerald-500 text-white border-emerald-500 shadow-sm scale-[1.01]'
                                   : 'bg-white text-slate-500 border-slate-100 hover:border-slate-200'
                               }`}
                             >
-                              Bonds to {t}
+                              <span>{calcType === 'bonds' ? `Bonds to ${t}` : `Up to ${t}`}</span>
+                              <span className={`text-[10px] font-black opacity-60 ml-2 ${bondTarget === t ? 'text-white' : 'text-slate-300'}`}>{Math.round(mathStats[`${calcType}-${t}`] || 0)}%</span>
                             </button>
                           ))}
                         </div>
@@ -1257,13 +1374,14 @@ export default function App() {
                           <button
                             key={cat}
                             onClick={() => setCategoryFilter(cat)}
-                            className={`py-1 px-2 rounded-lg text-[10px] font-bold border transition-all text-left truncate ${
+                            className={`py-1 px-2 rounded-lg text-[10px] font-bold border transition-all truncate flex justify-between items-center ${
                               categoryFilter === cat 
                                 ? 'bg-bwa-blue/10 text-bwa-blue border-bwa-blue/20' 
                                 : 'bg-white text-slate-400 border-slate-100 hover:border-slate-200'
                             }`}
                           >
-                            {cat}
+                            <span className="truncate">{cat}</span>
+                            <span className="text-[9px] font-black opacity-40 ml-1 shrink-0">{Math.round(categoryStats[cat] || 0)}%</span>
                           </button>
                         ))}
                       </div>
@@ -1273,23 +1391,12 @@ export default function App() {
               </div>
 
               <div className="pt-2 mt-auto">
-                <div className="flex items-center justify-between gap-2 py-2 px-2 pl-4 bg-slate-50 rounded-2xl border border-slate-100 flex-wrap sm:flex-nowrap">
-                  <div className="flex items-center gap-3">
-                    <div className="p-1.5 bg-white rounded-lg shadow-sm">
-                      <GraduationCap className="w-5 h-5 text-slate-600" />
-                    </div>
-                    <div className="text-left leading-tight hidden sm:block">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Current Plan</p>
-                      <p className="font-bold text-sm text-slate-700">{gradeFilter} &bull; {section}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={startNewSession}
-                    className="py-2.5 px-6 bg-emerald-500 hover:bg-emerald-600 text-white rounded-[1.25rem] font-black text-sm transition-all shadow-md shadow-emerald-100 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-1.5 shrink-0 w-full sm:w-auto"
-                  >
-                    Start Session <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
+                <button
+                  onClick={startNewSession}
+                  className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black text-lg transition-all shadow-lg shadow-emerald-100 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2"
+                >
+                  Start Session <ChevronRight className="w-5 h-5" />
+                </button>
               </div>
             </div>
           </div>
@@ -1314,6 +1421,7 @@ export default function App() {
               onAnswer={handleMathsAnswer}
               grade={gradeFilter}
               forcedTarget={bondTarget}
+              calcType={calcType}
             />
           </>
         ) : (
@@ -1342,13 +1450,14 @@ export default function App() {
                         setCategoryFilter(cat);
                         setCurrentWordIndex(null);
                       }}
-                      className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition-all duration-200 ${
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition-all duration-200 flex items-center gap-1.5 ${
                         categoryFilter === cat 
                           ? 'bg-bwa-blue text-white shadow-sm' 
                           : 'text-slate-400 hover:bg-slate-50'
                       }`}
                     >
-                      {cat}
+                      <span>{cat}</span>
+                      <span className={`text-[9px] ${categoryFilter === cat ? 'text-white/60' : 'text-slate-300'}`}>{Math.round(categoryStats[cat] || 0)}%</span>
                     </button>
                   ))}
                 </div>

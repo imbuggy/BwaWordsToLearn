@@ -18,6 +18,7 @@ export interface BondData {
 }
 
 export interface NumberBondStats {
+  type?: 'bonds' | 'additions';
   target: number;
   correct: number;
   total: number;
