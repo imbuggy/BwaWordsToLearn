@@ -7,8 +7,8 @@ import {defineConfig, loadEnv} from 'vite';
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
   return {
-    // Use relative paths for assets to support both root and subfolder deployments:
-    base: './',
+    // Use relative paths or exact repo name depending on the environment
+    base: process.env.GITHUB_ACTIONS ? '/BwaWordsToLearn/' : './',
     plugins: [react(), tailwindcss()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),

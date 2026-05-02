@@ -277,9 +277,29 @@ function NumberBonds({ stats, onUpdateStats, onAnswer, grade, forcedTarget }: {
   );
 }
 
+const safeStorage = {
+  getItem: (key: string) => {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+  setItem: (key: string, value: string) => {
+    try {
+      localStorage.setItem(key, value);
+    } catch {}
+  },
+  removeItem: (key: string) => {
+    try {
+      localStorage.removeItem(key);
+    } catch {}
+  }
+};
+
 export default function App() {
   const [words, setWords] = useState<WordData[]>(() => {
-    const saved = localStorage.getItem('word-spark-data');
+    const saved = safeStorage.getItem('word-spark-data');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -307,17 +327,17 @@ export default function App() {
   });
   
   const [gradeFilter, setGradeFilter] = useState<GradeLevel>(() => {
-    const saved = localStorage.getItem('word-spark-grade');
+    const saved = safeStorage.getItem('word-spark-grade');
     return (saved as GradeLevel) || 'Reception';
   });
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [mode, setMode] = useState<AppMode>('Read');
   const [section, setSection] = useState<AppSection>(() => {
-    const saved = localStorage.getItem('word-spark-section');
+    const saved = safeStorage.getItem('word-spark-section');
     return (saved as AppSection) || 'Words';
   });
   const [numberBondStats, setNumberBondStats] = useState<NumberBondStats[]>(() => {
-    const saved = localStorage.getItem('word-spark-maths');
+    const saved = safeStorage.getItem('word-spark-maths');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -361,19 +381,19 @@ export default function App() {
 
   // Save to local storage whenever words or grade change
   useEffect(() => {
-    localStorage.setItem('word-spark-data', JSON.stringify(words));
+    safeStorage.setItem('word-spark-data', JSON.stringify(words));
   }, [words]);
 
   useEffect(() => {
-    localStorage.setItem('word-spark-grade', gradeFilter);
+    safeStorage.setItem('word-spark-grade', gradeFilter);
   }, [gradeFilter]);
 
   useEffect(() => {
-    localStorage.setItem('word-spark-section', section);
+    safeStorage.setItem('word-spark-section', section);
   }, [section]);
 
   useEffect(() => {
-    localStorage.setItem('word-spark-maths', JSON.stringify(numberBondStats));
+    safeStorage.setItem('word-spark-maths', JSON.stringify(numberBondStats));
   }, [numberBondStats]);
 
   const filteredWords = useMemo(() => {
@@ -554,8 +574,8 @@ export default function App() {
       { target: 10, correct: 0, total: 0, bestStreak: 0, bonds: {} },
       { target: 20, correct: 0, total: 0, bestStreak: 0, bonds: {} }
     ]);
-    localStorage.removeItem('word-spark-data');
-    localStorage.removeItem('word-spark-maths');
+    safeStorage.removeItem('word-spark-data');
+    safeStorage.removeItem('word-spark-maths');
     setCurrentWordIndex(null);
     setShowResetConfirm(false);
     setShowScoreboard(false);
