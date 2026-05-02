@@ -1,2 +1,0 @@
-# This file tells GitHub Pages not to run Jekyll on this repository.
-# This is necessary for Vite/React apps because Jekyll ignores folders starting with an underscore (like _assets).

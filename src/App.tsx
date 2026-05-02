@@ -281,22 +281,27 @@ export default function App() {
   const [words, setWords] = useState<WordData[]>(() => {
     const saved = localStorage.getItem('word-spark-data');
     if (saved) {
-      const parsed = JSON.parse(saved);
-      // Migrate old data if needed
-      return parsed.map((w: any) => {
-        let currentWord = w.word;
-        if (currentWord === 'eye(s)') currentWord = 'eye';
-        
-        const initialWord = INITIAL_WORDS.find(iw => iw.word === currentWord && iw.level === w.level);
-        return {
-          ...w,
-          word: currentWord,
-          // Force update category from INITIAL_WORDS to pick up re-categorization
-          category: initialWord?.category ?? w.category ?? 'General',
-          readScore: w.readScore ?? w.score ?? 0,
-          writeScore: w.writeScore ?? 0
-        };
-      });
+      try {
+        const parsed = JSON.parse(saved);
+        // Migrate old data if needed
+        return parsed.map((w: any) => {
+          let currentWord = w.word;
+          if (currentWord === 'eye(s)') currentWord = 'eye';
+          
+          const initialWord = INITIAL_WORDS.find(iw => iw.word === currentWord && iw.level === w.level);
+          return {
+            ...w,
+            word: currentWord,
+            // Force update category from INITIAL_WORDS to pick up re-categorization
+            category: initialWord?.category ?? w.category ?? 'General',
+            readScore: w.readScore ?? w.score ?? 0,
+            writeScore: w.writeScore ?? 0
+          };
+        });
+      } catch(e) {
+        console.error("Error parsing word-spark-data", e);
+        return INITIAL_WORDS;
+      }
     }
     return INITIAL_WORDS;
   });
@@ -314,11 +319,15 @@ export default function App() {
   const [numberBondStats, setNumberBondStats] = useState<NumberBondStats[]>(() => {
     const saved = localStorage.getItem('word-spark-maths');
     if (saved) {
-      const parsed = JSON.parse(saved);
-      return parsed.map((s: any) => ({
-        ...s,
-        bonds: s.bonds || {}
-      }));
+      try {
+        const parsed = JSON.parse(saved);
+        return parsed.map((s: any) => ({
+          ...s,
+          bonds: s.bonds || {}
+        }));
+      } catch(e) {
+        console.error("Error parsing word-spark-maths", e);
+      }
     }
     return [
       { target: 10, correct: 0, total: 0, bestStreak: 0, bonds: {} },
