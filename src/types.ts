@@ -1,7 +1,7 @@
 
 export type GradeLevel = 'Reception' | 'Year 1';
 export type AppMode = 'Read';
-export type AppSection = 'Words' | 'Maths';
+export type AppSection = 'Words' | 'Maths' | 'Phonics';
 
 export interface WordData {
   word: string;

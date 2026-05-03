@@ -31,11 +31,12 @@ import {
   Star,
   TrendingUp,
   TrendingDown,
-  PartyPopper
+  PartyPopper,
+  Volume2
 } from 'lucide-react';
 import { jsPDF } from "jspdf";
 import autoTable from 'jspdf-autotable';
-import { INITIAL_WORDS } from './constants';
+import { INITIAL_WORDS, PHONICS_WORDS } from './constants';
 import { WordData, GradeLevel, AppMode, AppSection, NumberBondStats } from './types';
 
 const playSuccessSound = () => {
@@ -78,8 +79,76 @@ const playWrongSound = () => {
   setTimeout(() => audioCtx.close(), 500);
 };
 
+function PhonicsQuiz({ onComplete, onCancel }: { onComplete: (score: number) => void, onCancel: () => void }) {
+  const [index, setIndex] = useState(0);
+  const [score, setScore] = useState(0);
+
+  const word = PHONICS_WORDS[index];
+
+  const handleAnswer = (correct: boolean) => {
+    const newScore = score + (correct ? 1 : 0);
+    if (index < PHONICS_WORDS.length - 1) {
+      setScore(newScore);
+      setIndex(index + 1);
+    } else {
+      onComplete(newScore);
+    }
+  };
+
+  if (!word) return null;
+
+  return (
+    <div className="flex flex-col items-center w-full max-w-md mx-auto space-y-8">
+      <div className="w-full flex items-center justify-between px-2">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            Section {word.section}
+          </span>
+        </div>
+        <span className="text-[10px] font-black text-violet-600 bg-violet-50 px-2 py-1 rounded-lg">
+          {index + 1} / 40
+        </span>
+      </div>
+
+      <motion.div 
+        key={word.word}
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white p-12 md:p-16 rounded-[3rem] shadow-xl border border-slate-100 flex flex-col items-center justify-center min-h-[300px] w-full relative"
+      >
+        <span className="text-6xl md:text-8xl font-black text-slate-800 tracking-tight lowercase font-comic">
+          {word.word}
+        </span>
+        {word.isPseudo && (
+          <div className="absolute top-6 right-6 text-2xl" title="Alien Word">
+            👽
+          </div>
+        )}
+      </motion.div>
+
+      <div className="grid grid-cols-2 gap-4 w-full">
+        <button
+          onClick={() => handleAnswer(false)}
+          className="py-5 bg-white border-2 border-slate-100 hover:border-red-200 text-slate-400 hover:text-red-500 rounded-3xl font-black text-lg transition-all"
+        >
+          Incorrect
+        </button>
+        <button
+          onClick={() => handleAnswer(true)}
+          className="py-5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-3xl font-black text-lg shadow-lg shadow-emerald-500/20 transition-all flex justify-center items-center gap-2"
+        >
+          <Check className="w-6 h-6" /> Correct
+        </button>
+      </div>
+      
+      <button onClick={onCancel} className="text-sm font-bold text-slate-400 hover:text-slate-600 underline underline-offset-4">End Test Early</button>
+    </div>
+  );
+}
+
 function NumberBonds({ stats, onUpdateStats, onAnswer, grade, forcedTarget, calcType }: { 
-  stats: NumberBondStats[], 
+  stats: NumberBondStats[],
   onUpdateStats: (stats: NumberBondStats[]) => void,
   onAnswer: (isCorrect: boolean, bondKey: string, oldTime: number | undefined, newTime: number) => void,
   grade: GradeLevel,
@@ -400,6 +469,20 @@ export default function App() {
   const [bondTarget, setBondTarget] = useState<10 | 20>(10);
   const [calcType, setCalcType] = useState<'bonds' | 'additions'>('bonds');
   const [currentWordIndex, setCurrentWordIndex] = useState<number | null>(null);
+  const [phonicsScores, setPhonicsScores] = useState<{ date: number, score: number }[]>(() => {
+    const saved = safeStorage.getItem('word-spark-phonics');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return [];
+  });
+  const [phonicsIndex, setPhonicsIndex] = useState(0);
+  const [phonicsCurrentScore, setPhonicsCurrentScore] = useState(0);
+
+  const savePhonicsScores = (newScores: { date: number, score: number }[]) => {
+    setPhonicsScores(newScores);
+    safeStorage.setItem('word-spark-phonics', JSON.stringify(newScores));
+  };
   const [lastWordIndex, setLastWordIndex] = useState<number | null>(null);
   const [lastWordId, setLastWordId] = useState<string | null>(null);
   const [reviewQueue, setReviewQueue] = useState<{ index: number; reappearIn: number }[]>([]);
@@ -773,6 +856,10 @@ export default function App() {
     setShowSessionSummary(false);
     setSessionAchievements({ masteredWords: [], improvedBonds: [], worsenedBonds: [] });
     if (section === 'Words') pickNextWord();
+    else if (section === 'Phonics') {
+      setPhonicsIndex(0);
+      setPhonicsCurrentScore(0);
+    }
   };
 
   const currentWord = currentWordIndex !== null ? words[currentWordIndex] : null;
@@ -1063,22 +1150,23 @@ export default function App() {
               </div>
 
               {/* Tab Switcher */}
-              <div className="flex p-1 bg-slate-200/50 rounded-2xl gap-1">
-                {(['Read', 'Maths'] as const).map((tab) => (
+              <div className="flex p-1 bg-slate-200/50 rounded-2xl gap-1 flex-wrap sm:flex-nowrap">
+                {(['Read', 'Maths', 'Phonics'] as const).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => {
                       if (tab === 'Maths') {
                         setSection('Maths');
+                      } else if (tab === 'Phonics') {
+                        setSection('Phonics');
                       } else {
                         setSection('Words');
-                        // setMode(tab); // removed
                       }
                       setSessionActive(false); // Switch reset
                       setSessionCount(0);
                     }}
-                    className={`flex-1 py-3 rounded-xl text-sm font-black transition-all ${
-                      (tab === 'Maths' && section === 'Maths') || (tab === 'Read' && section === 'Words')
+                    className={`flex-1 py-3 px-2 rounded-xl text-sm font-black transition-all min-w-[100px] ${
+                      (tab === 'Maths' && section === 'Maths') || (tab === 'Read' && section === 'Words') || (tab === 'Phonics' && section === 'Phonics')
                         ? 'bg-white text-bwa-blue shadow-sm'
                         : 'text-slate-500 hover:text-slate-700'
                     }`}
@@ -1144,6 +1232,42 @@ export default function App() {
                       })}
                     </div>
                   </div>
+                </div>
+              ) : section === 'Phonics' ? (
+                <div className="space-y-8">
+                  <div className="bg-violet-50 p-6 rounded-2xl border border-violet-100 flex items-center justify-between">
+                    <div>
+                      <div className="text-violet-600 text-sm font-bold uppercase tracking-wider mb-1">Previous Checks</div>
+                      <div className="text-4xl font-black text-violet-700">{phonicsScores.length}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[10px] font-bold text-violet-400 uppercase mb-1">Best Score</div>
+                      <div className="text-3xl font-black text-violet-500">{phonicsScores.length > 0 ? Math.max(...phonicsScores.map(s => s.score)) : 0} <span className="text-violet-300 font-normal text-lg">/ 40</span></div>
+                    </div>
+                  </div>
+                  
+                  {phonicsScores.length > 0 && (
+                    <div className="space-y-4">
+                      <h3 className="font-bold text-slate-700 flex items-center gap-2 mb-4">
+                        <Volume2 className="w-5 h-5" /> Recent Results
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {[...phonicsScores].reverse().slice(0, 8).map((score, i) => (
+                          <div key={i} className="bg-white p-4 rounded-xl border border-slate-200">
+                            <div className="text-[10px] text-slate-400 font-bold mb-1">
+                              {new Date(score.date).toLocaleDateString()}
+                            </div>
+                            <div className="text-2xl font-black text-slate-700">
+                              {score.score} <span className="text-sm font-normal text-slate-400">/ 40</span>
+                            </div>
+                            <div className={`text-[10px] uppercase font-black mt-2 ${score.score >= 32 ? 'text-emerald-500' : 'text-amber-500'}`}>
+                              {score.score >= 32 ? 'Passed' : 'Keep Practicing'}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-10">
@@ -1288,22 +1412,22 @@ export default function App() {
               <div className="grid grid-cols-1 gap-4 text-left">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Practice Subject</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {(['Words', 'Maths'] as AppSection[]).map((s) => (
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['Words', 'Maths', 'Phonics'] as AppSection[]).map((s) => (
                       <button
                         key={s}
                         onClick={() => {
                           setSection(s);
                           setSessionCount(0);
                         }}
-                        className={`py-2.5 rounded-xl font-bold flex flex-row items-center justify-center gap-2 border-2 transition-all ${
+                        className={`py-2.5 rounded-xl font-bold flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 border-2 transition-all ${
                           section === s 
                             ? 'bg-slate-800 text-white border-slate-800 shadow-sm scale-[1.02]' 
                             : 'bg-white text-slate-500 border-slate-100 hover:border-slate-200'
                         }`}
                       >
-                        {s === 'Maths' ? <Calculator className="w-4 h-4" /> : <BookOpen className="w-4 h-4" />}
-                        <span className="text-sm">{s}</span>
+                        {s === 'Maths' ? <Calculator className="w-4 h-4" /> : s === 'Phonics' ? <Volume2 className="w-4 h-4" /> : <BookOpen className="w-4 h-4" />}
+                        <span className="text-xs sm:text-sm">{s}</span>
                       </button>
                     ))}
                   </div>
@@ -1424,6 +1548,18 @@ export default function App() {
               calcType={calcType}
             />
           </>
+        ) : section === 'Phonics' ? (
+          <PhonicsQuiz 
+            onComplete={(score) => {
+              savePhonicsScores([...phonicsScores, { date: Date.now(), score }]);
+              setSessionActive(false);
+              setShowSessionSummary(true);
+              setPhonicsCurrentScore(score);
+            }} 
+            onCancel={() => {
+              setSessionActive(false);
+            }}
+          />
         ) : (
           <>
             {/* Session Progress */}
@@ -1670,9 +1806,21 @@ export default function App() {
                   </div>
                   
                   <h2 className="text-4xl font-black text-slate-800 mb-2">Session Complete!</h2>
-                  <p className="text-slate-500 font-medium mb-10">You've finished 20 questions. Great work!</p>
+                  <p className="text-slate-500 font-medium mb-10">
+                    {section === 'Phonics' 
+                      ? `You scored ${phonicsCurrentScore} out of 40 on the Phonics check.`
+                      : "You've finished 20 questions. Great work!"}
+                  </p>
 
                   <div className="space-y-6 text-left mb-10">
+                    {section === 'Phonics' && (
+                      <div className={`rounded-2xl p-6 border text-center ${phonicsCurrentScore >= 32 ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100'}`}>
+                        <div className="text-6xl font-black mb-2">{phonicsCurrentScore}</div>
+                        <div className={`font-bold ${phonicsCurrentScore >= 32 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                          {phonicsCurrentScore >= 32 ? 'Passed standard check threshold! 🎉' : "Keep practicing! You'll get there!"}
+                        </div>
+                      </div>
+                    )}
                     {sessionAchievements.masteredWords.length > 0 && (
                       <div className="bg-emerald-50 rounded-2xl p-5 border border-emerald-100">
                         <h3 className="text-emerald-700 font-black text-xs uppercase tracking-widest mb-3 flex items-center gap-2">
