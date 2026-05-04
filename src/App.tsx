@@ -150,7 +150,7 @@ function PhonicsQuiz({ onComplete, onCancel }: { onComplete: (score: number) => 
 function NumberBonds({ stats, onUpdateStats, onAnswer, grade, forcedTarget, calcType }: { 
   stats: NumberBondStats[],
   onUpdateStats: (stats: NumberBondStats[]) => void,
-  onAnswer: (isCorrect: boolean, bondKey: string, oldTime: number | undefined, newTime: number) => void,
+  onAnswer: (isCorrect: boolean, bondKey: string, oldTime: number | undefined, newTime: number, isPrimaryUpdate?: boolean) => void,
   grade: GradeLevel,
   forcedTarget: 10 | 20,
   calcType: 'bonds' | 'additions'
@@ -167,7 +167,7 @@ function NumberBonds({ stats, onUpdateStats, onAnswer, grade, forcedTarget, calc
     }
   }, [grade]);
   const [question, setQuestion] = useState<{ a: number, b: number, answer: number } | null>(null);
-  const [prevQuestionKey, setPrevQuestionKey] = useState<string | null>(null);
+  const prevQuestionKey = useRef<string | null>(null);
   const [options, setOptions] = useState<number[]>([]);
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
@@ -187,10 +187,10 @@ function NumberBonds({ stats, onUpdateStats, onAnswer, grade, forcedTarget, calc
         correctAns = a + b;
       }
       key = `${Math.min(a, b)}+${Math.max(a, b)}`;
-    } while (key === prevQuestionKey && target <= 20); // Avoid same numeric pair twice
+    } while (key === prevQuestionKey.current && target <= 20); // Avoid same numeric pair twice
 
     setQuestion({ a, b, answer: correctAns });
-    setPrevQuestionKey(key);
+    prevQuestionKey.current = key;
     
     // Generate options
     const others = new Set<number>();
@@ -207,7 +207,7 @@ function NumberBonds({ stats, onUpdateStats, onAnswer, grade, forcedTarget, calc
     setFeedback(null);
     setSelectedAnswer(null);
     startTime.current = Date.now();
-  }, [target, calcType, prevQuestionKey]);
+  }, [target, calcType]);
 
   useEffect(() => {
     generateQuestion();
@@ -229,7 +229,7 @@ function NumberBonds({ stats, onUpdateStats, onAnswer, grade, forcedTarget, calc
       s.bonds = { ...s.bonds };
       s.total += 1;
       
-      const updateBond = (a: number, b: number, time: number, penalty: boolean) => {
+      const updateBond = (a: number, b: number, time: number, penalty: boolean, isPrimary: boolean) => {
         const key = `${Math.min(a, b)}+${Math.max(a, b)}`;
         const existing = s.bonds[key] || { avgTime: 0, recentTimes: [] };
         const oldAvg = existing.avgTime || undefined;
@@ -243,7 +243,7 @@ function NumberBonds({ stats, onUpdateStats, onAnswer, grade, forcedTarget, calc
         existing.avgTime = newRecent.reduce((acc, t) => acc + t, 0) / newRecent.length;
         
         s.bonds[key] = existing;
-        onAnswer(isCorrect, key, oldAvg, existing.avgTime);
+        onAnswer(isCorrect, key, oldAvg, existing.avgTime, isPrimary);
       };
 
       if (isCorrect) {
@@ -251,16 +251,16 @@ function NumberBonds({ stats, onUpdateStats, onAnswer, grade, forcedTarget, calc
         setStreak(curr => curr + 1);
         s.correct += 1;
         s.bestStreak = Math.max(s.bestStreak, streak + 1);
-        updateBond(question.a, question.b, timeTaken, false);
+        updateBond(question.a, question.b, timeTaken, false, true);
       } else {
         playWrongSound();
         setStreak(0);
         // Penalty for current bond
-        updateBond(question.a, question.b, timeTaken, true);
+        updateBond(question.a, question.b, timeTaken, true, true);
         // If bond, answer is the missing part. If addition, answer is the sum.
         if (calcType === 'bonds') {
           const guessedA = target - ans;
-          updateBond(guessedA, ans, timeTaken, true);
+          updateBond(guessedA, ans, timeTaken, true, false);
         } else {
             // For addition penalty on wrong answer, we just note the wrong answer 
             // no specific A B swap here
@@ -358,9 +358,11 @@ function NumberBonds({ stats, onUpdateStats, onAnswer, grade, forcedTarget, calc
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 md:gap-4 w-full max-w-md">
-        {stats.map((s) => (
+        {stats.filter(s => s.type === calcType).map((s) => (
           <div key={s.target} className="bg-white p-3 md:p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center">
-            <span className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Bonds to {s.target}</span>
+            <span className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 text-center">
+              {s.type === 'bonds' ? `Bonds to ${s.target}` : `Add to ${s.target}`}
+            </span>
             <div className="flex items-baseline gap-1">
               <span className="text-lg md:text-xl font-black text-slate-700">{s.correct}</span>
               <span className="text-xs text-slate-300">/ {s.total}</span>
@@ -401,21 +403,32 @@ export default function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Migrate old data if needed
-        return parsed.map((w: any) => {
+        const dedupedMap = new Map<string, WordData>();
+        
+        parsed.forEach((w: any) => {
           let currentWord = w.word;
           if (currentWord === 'eye(s)') currentWord = 'eye';
           
           const initialWord = INITIAL_WORDS.find(iw => iw.word === currentWord && iw.level === w.level);
-          return {
-            ...w,
-            word: currentWord,
-            // Force update category from INITIAL_WORDS to pick up re-categorization
-            category: initialWord?.category ?? w.category ?? 'General',
-            readScore: w.readScore ?? w.score ?? 0,
-            writeScore: w.writeScore ?? 0
-          };
+          const key = `${currentWord}-${w.level}`;
+          
+          // Merge duplicates by keeping the highest score
+          if (dedupedMap.has(key)) {
+            const existing = dedupedMap.get(key)!;
+            existing.readScore = Math.max(existing.readScore, w.readScore ?? w.score ?? 0);
+            existing.writeScore = Math.max(existing.writeScore, w.writeScore ?? 0);
+          } else {
+            dedupedMap.set(key, {
+              ...w,
+              word: currentWord,
+              category: initialWord?.category ?? w.category ?? 'General',
+              readScore: w.readScore ?? w.score ?? 0,
+              writeScore: w.writeScore ?? 0
+            });
+          }
         });
+        
+        return Array.from(dedupedMap.values());
       } catch(e) {
         console.error("Error parsing word-spark-data", e);
         return INITIAL_WORDS;
@@ -496,6 +509,7 @@ export default function App() {
   const [selectedPdfCategories, setSelectedPdfCategories] = useState<string[]>([]);
   const [syncInput, setSyncInput] = useState('');
   const [syncStatus, setSyncStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [exportStatus, setExportStatus] = useState<'idle' | 'success'>('idle');
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
   const [sessionCount, setSessionCount] = useState(0);
   const [sessionActive, setSessionActive] = useState(false);
@@ -668,11 +682,46 @@ export default function App() {
 
     setFeedback(correct ? 'correct' : 'wrong');
 
+    const wordObj = words[currentWordIndex];
+    const oldScore = mode === 'Read' ? wordObj.readScore : wordObj.writeScore;
+    const newScore = correct ? oldScore + 1 : Math.max(0, oldScore - 1);
+    const becameMastered = correct && newScore === 5 && oldScore < 5;
+
+    if (becameMastered) {
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#10b981', '#3b82f6', '#f59e0b']
+      });
+      playSuccessSound();
+      
+      setSessionAchievements(prev => ({
+        ...prev,
+        masteredWords: prev.masteredWords.includes(wordObj.word) ? prev.masteredWords : [...prev.masteredWords, wordObj.word]
+      }));
+    } else if (correct) {
+      // Smaller "ding" for regular correct answers
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
+      gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.1);
+      setTimeout(() => audioCtx.close(), 200);
+    }
+
+    setSessionCount(prev => prev + 1);
+
     // Update score immediately
     setWords(prev => {
       const newWords = [...prev];
       const word = { ...newWords[currentWordIndex] };
-      const oldScore = mode === 'Read' ? word.readScore : word.writeScore;
       
       if (mode === 'Read') {
         word.readScore = correct ? word.readScore + 1 : Math.max(0, word.readScore - 1);
@@ -680,46 +729,10 @@ export default function App() {
         word.writeScore = correct ? word.writeScore + 1 : Math.max(0, word.writeScore - 1);
       }
       
-      const newScore = mode === 'Read' ? word.readScore : word.writeScore;
-      
-      // Success celebration!
-      if (correct && newScore === 5 && oldScore < 5) {
-        confetti({
-          particleCount: 150,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#10b981', '#3b82f6', '#f59e0b']
-        });
-        playSuccessSound();
-      } else if (correct) {
-        // Smaller "ding" for regular correct answers
-        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
-        gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.1);
-        setTimeout(() => audioCtx.close(), 200);
-      }
-
-    word.lastSeen = Date.now();
-    newWords[currentWordIndex] = word;
-
-    if (correct && newScore === 5 && oldScore < 5) {
-      setSessionAchievements(prev => ({
-        ...prev,
-        masteredWords: [...prev.masteredWords, word.word]
-      }));
-    }
-
-    setSessionCount(prev => prev + 1);
-    return newWords;
-  });
+      word.lastSeen = Date.now();
+      newWords[currentWordIndex] = word;
+      return newWords;
+    });
 
     // Add to review queue if wrong
     if (!correct) {
@@ -749,23 +762,38 @@ export default function App() {
     setShowScoreboard(false);
   };
 
-  const exportProgress = () => {
-    const data = {
-      w: words
-        .filter(w => w.readScore > 0 || w.writeScore > 0)
-        .map(w => ({ w: w.word, l: w.level, r: w.readScore, wr: w.writeScore })),
-      m: numberBondStats
-    };
-    return btoa(JSON.stringify(data));
-  };
+  const exportedString = useMemo(() => {
+    try {
+      const data = {
+        w: words
+          .filter(w => w.readScore > 0 || w.writeScore > 0)
+          .map(w => ({ w: w.word, l: w.level, r: w.readScore, wr: w.writeScore })),
+        m: numberBondStats,
+        p: phonicsScores
+      };
+      // Use encodeURIComponent to handle non-Latin1 characters safely
+      return btoa(encodeURIComponent(JSON.stringify(data)));
+    } catch(e) {
+      console.error(e);
+      return "";
+    }
+  }, [words, numberBondStats, phonicsScores]);
 
   const handleImport = () => {
     try {
-      const data = JSON.parse(atob(syncInput.trim()));
+      let jsonString = '';
+      try {
+        jsonString = decodeURIComponent(atob(syncInput.trim()));
+      } catch (e) {
+        // Fallback for old codes that were natively btoa'd
+        jsonString = atob(syncInput.trim());
+      }
+      const data = JSON.parse(jsonString);
       
       // Handle legacy format (array of words) or new format (object with w and m)
       const wordData = Array.isArray(data) ? data : data.w;
       const mathsData = !Array.isArray(data) ? data.m : null;
+      const phData = !Array.isArray(data) ? data.p : null;
 
       if (wordData) {
         setWords(prev => {
@@ -787,6 +815,10 @@ export default function App() {
       if (mathsData) {
         setNumberBondStats(mathsData);
       }
+      
+      if (phData) {
+        setPhonicsScores(phData);
+      }
 
       setSyncStatus('success');
       setTimeout(() => {
@@ -802,8 +834,8 @@ export default function App() {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    setSyncStatus('success');
-    setTimeout(() => setSyncStatus('idle'), 2000);
+    setExportStatus('success');
+    setTimeout(() => setExportStatus('idle'), 2000);
   };
 
   const toggleMastery = (wordToToggle: string) => {
@@ -819,7 +851,7 @@ export default function App() {
     }));
   };
 
-  const handleMathsAnswer = (isCorrect: boolean, key: string, oldTime: number | undefined, newTime: number) => {
+  const handleMathsAnswer = (isCorrect: boolean, key: string, oldTime: number | undefined, newTime: number, isPrimaryUpdate: boolean = true) => {
     if (!sessionActive || sessionCount >= 20) return;
 
     if (oldTime !== undefined) {
@@ -835,7 +867,10 @@ export default function App() {
         }));
       }
     }
-    setSessionCount(prev => prev + 1);
+    
+    if (isPrimaryUpdate) {
+      setSessionCount(prev => prev + 1);
+    }
   };
 
   useEffect(() => {
@@ -1600,6 +1635,100 @@ export default function App() {
               </div>
             )}
 
+          <div className="flex flex-col items-center">
+            {/* Progress Bar */}
+            <div className="w-full max-w-md mb-4 md:mb-8">
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-3 bg-slate-200 rounded-full overflow-hidden shadow-inner">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${stats.granularProgress}%` }}
+                    className="h-full bg-gradient-to-r from-bwa-blue to-emerald-500"
+                  />
+                </div>
+                <span className="text-xs font-black text-bwa-blue min-w-[3ch]">
+                  {Math.round(stats.granularProgress)}%
+                </span>
+              </div>
+              <div className="flex justify-between mt-1">
+                <p className="text-[10px] text-slate-400 font-medium">
+                  {stats.mastered} / {stats.total} mastered
+                </p>
+                {stats.learning > 0 && (
+                  <p className="text-[10px] text-bwa-blue/60 font-medium animate-pulse">
+                    {stats.learning} active
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Flashcard */}
+            <div className="relative w-full max-w-md aspect-[4/3] mb-4 md:mb-8">
+              <AnimatePresence mode="wait">
+                {currentWord && (
+                  <motion.div
+                    key={currentWord.word}
+                    initial={{ scale: 0.8, opacity: 0, rotateY: -20 }}
+                    animate={{ 
+                      scale: 1, 
+                      opacity: 1, 
+                      rotateY: 0,
+                      backgroundColor: feedback === 'correct' ? '#ecfdf5' : feedback === 'wrong' ? '#fef2f2' : '#ffffff'
+                    }}
+                    exit={{ scale: 1.2, opacity: 0, rotateY: 20 }}
+                    transition={{ type: 'spring', damping: 15 }}
+                    className="absolute inset-0 rounded-[2.5rem] shadow-2xl border-4 border-slate-100 flex flex-col items-center justify-center p-8 text-center"
+                  >
+                    <div className="absolute top-6 right-8 flex gap-1">
+                      {[...Array(5)].map((_, i) => {
+                        const score = mode === 'Read' ? currentWord.readScore : currentWord.writeScore;
+                        return (
+                          <div 
+                            key={i} 
+                            className={`w-3 h-3 rounded-full ${i < score ? 'bg-emerald-400' : 'bg-slate-200'}`} 
+                          />
+                        );
+                      })}
+                    </div>
+
+                    <h2 className="text-7xl md:text-8xl font-black text-slate-800 tracking-tight mb-8">
+                      {currentWord.word}
+                    </h2>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+ 
+            {/* Controls */}
+            <div className="flex gap-6 w-full max-w-md">
+              <button
+                onClick={() => handleAnswer(false)}
+                className="flex-1 bg-white border-2 border-red-100 hover:border-red-200 text-red-500 py-6 rounded-3xl font-bold flex flex-col items-center gap-2 transition-all hover:bg-red-50 active:scale-95 shadow-lg shadow-red-100"
+              >
+                <XCircle className="w-10 h-10" />
+                <span>Still Learning</span>
+              </button>
+              
+              <button
+                onClick={() => handleAnswer(true)}
+                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-6 rounded-3xl font-bold flex flex-col items-center gap-2 transition-all hover:shadow-xl active:scale-95 shadow-lg shadow-emerald-100"
+              >
+                <CheckCircle2 className="w-10 h-10" />
+                <span>Got it!</span>
+              </button>
+            </div>
+
+            <div className="mt-12 text-slate-400 text-sm font-medium flex items-center gap-2">
+              <ChevronRight className="w-4 h-4" />
+              Next word will appear based on your progress
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-slate-200 text-center md:hidden">
+              <p className="text-[10px] text-slate-400">© 2026 All Rights Reserved</p>
+            </div>
+          </div>
+        </>
+      )}
         {/* About Modal */}
         <AnimatePresence>
           {showAboutModal && (
@@ -1933,15 +2062,15 @@ export default function App() {
                       <div className="relative">
                         <textarea 
                           readOnly
-                          value={exportProgress()}
+                          value={exportedString}
                           className="w-full h-24 bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs font-mono text-slate-600 focus:outline-none resize-none"
                         />
                         <button 
-                          onClick={() => copyToClipboard(exportProgress())}
+                          onClick={() => copyToClipboard(exportedString)}
                           className="absolute bottom-3 right-3 bg-white border border-slate-200 p-2 rounded-lg shadow-sm hover:bg-slate-50 transition-colors flex items-center gap-2 text-xs font-bold text-bwa-blue"
                         >
-                          {syncStatus === 'success' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                          {syncStatus === 'success' ? 'Copied!' : 'Copy Code'}
+                          {exportStatus === 'success' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                          {exportStatus === 'success' ? 'Copied!' : 'Copy Code'}
                         </button>
                       </div>
                     </div>
@@ -1983,100 +2112,6 @@ export default function App() {
           )}
         </AnimatePresence>
 
-          <div className="flex flex-col items-center">
-            {/* Progress Bar */}
-            <div className="w-full max-w-md mb-4 md:mb-8">
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-3 bg-slate-200 rounded-full overflow-hidden shadow-inner">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${stats.granularProgress}%` }}
-                    className="h-full bg-gradient-to-r from-bwa-blue to-emerald-500"
-                  />
-                </div>
-                <span className="text-xs font-black text-bwa-blue min-w-[3ch]">
-                  {Math.round(stats.granularProgress)}%
-                </span>
-              </div>
-              <div className="flex justify-between mt-1">
-                <p className="text-[10px] text-slate-400 font-medium">
-                  {stats.mastered} / {stats.total} mastered
-                </p>
-                {stats.learning > 0 && (
-                  <p className="text-[10px] text-bwa-blue/60 font-medium animate-pulse">
-                    {stats.learning} active
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Flashcard */}
-            <div className="relative w-full max-w-md aspect-[4/3] mb-4 md:mb-8">
-              <AnimatePresence mode="wait">
-                {currentWord && (
-                  <motion.div
-                    key={currentWord.word}
-                    initial={{ scale: 0.8, opacity: 0, rotateY: -20 }}
-                    animate={{ 
-                      scale: 1, 
-                      opacity: 1, 
-                      rotateY: 0,
-                      backgroundColor: feedback === 'correct' ? '#ecfdf5' : feedback === 'wrong' ? '#fef2f2' : '#ffffff'
-                    }}
-                    exit={{ scale: 1.2, opacity: 0, rotateY: 20 }}
-                    transition={{ type: 'spring', damping: 15 }}
-                    className="absolute inset-0 rounded-[2.5rem] shadow-2xl border-4 border-slate-100 flex flex-col items-center justify-center p-8 text-center"
-                  >
-                    <div className="absolute top-6 right-8 flex gap-1">
-                      {[...Array(5)].map((_, i) => {
-                        const score = mode === 'Read' ? currentWord.readScore : currentWord.writeScore;
-                        return (
-                          <div 
-                            key={i} 
-                            className={`w-3 h-3 rounded-full ${i < score ? 'bg-emerald-400' : 'bg-slate-200'}`} 
-                          />
-                        );
-                      })}
-                    </div>
-
-                    <h2 className="text-7xl md:text-8xl font-black text-slate-800 tracking-tight mb-8">
-                      {currentWord.word}
-                    </h2>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
- 
-            {/* Controls */}
-            <div className="flex gap-6 w-full max-w-md">
-              <button
-                onClick={() => handleAnswer(false)}
-                className="flex-1 bg-white border-2 border-red-100 hover:border-red-200 text-red-500 py-6 rounded-3xl font-bold flex flex-col items-center gap-2 transition-all hover:bg-red-50 active:scale-95 shadow-lg shadow-red-100"
-              >
-                <XCircle className="w-10 h-10" />
-                <span>Still Learning</span>
-              </button>
-              
-              <button
-                onClick={() => handleAnswer(true)}
-                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-6 rounded-3xl font-bold flex flex-col items-center gap-2 transition-all hover:shadow-xl active:scale-95 shadow-lg shadow-emerald-100"
-              >
-                <CheckCircle2 className="w-10 h-10" />
-                <span>Got it!</span>
-              </button>
-            </div>
-
-            <div className="mt-12 text-slate-400 text-sm font-medium flex items-center gap-2">
-              <ChevronRight className="w-4 h-4" />
-              Next word will appear based on your progress
-            </div>
-
-            <div className="mt-4 pt-4 border-t border-slate-200 text-center md:hidden">
-              <p className="text-[10px] text-slate-400">© 2026 All Rights Reserved</p>
-            </div>
-          </div>
-        </>
-      )}
     </main>
     </div>
   );
